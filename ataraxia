@@ -1,0 +1,104 @@
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity ^0.8.26;
+
+/// @title Ataraxia protocol for data transfer
+/// @notice A lightweight contract designed to facilitate encrypted message transfer for messaging applications
+/// @dev Implements a minimal event-emission system to reduce gas costs while maintaining security
+/// @author Scott Ewing
+/// @custom:security-contact https://github.com/sewing848/ataraxia
+contract Ataraxia {
+    /// @notice Emitted when a message or resource transfer occurs
+    /// @param from The sender's address
+    /// @param to The recipient's address
+    /// @param messageType Identifier for the type of message (e.g., text, command, resource transfer)
+    /// @param data Compressed and encrypted message payload
+    event AtaraxiaTransfer(
+        address indexed from,
+        address indexed to,
+        uint256 indexed messageType,
+        bytes data
+    );
+
+    /// @notice Emitted when contract ownership changes
+    /// @param previousOwner Address of the previous owner
+    /// @param newOwner Address of the new owner
+    event OwnershipTransferred(
+        address indexed previousOwner,
+        address indexed newOwner
+    );
+
+    /// @notice Emitted when the paused variable is toggled
+    /// @param isPaused Boolean value after the state change
+    event PauseStateChanged(
+        bool isPaused
+    );
+
+    /// @notice Address of the contract owner
+    /// @dev Has exclusive rights to pause/unpause and transfer ownership
+    address public owner;
+
+    /// @notice Current pause state of the contract
+    /// @dev When true, prevents any message transfers
+    bool public paused = false;
+
+    /// @notice Restricts function access to contract owner
+    /// @dev Throws if called by any account other than the owner
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not the owner");
+        _;
+    }
+
+    /// @notice Prevents execution if contract is paused
+    /// @dev Used as a circuit breaker in case of emergency
+    modifier whenNotPaused() {
+        require(!paused, "Contract is paused");
+        _;
+    }
+
+    /// @notice Sets the contract deployer as the initial owner
+    constructor() {
+        owner = msg.sender;
+    }
+
+    /// @notice Emits a transfer event containing the message data
+    /// @dev Main function for message transmission, optimized for gas efficiency
+    /// @param to Recipient address
+    /// @param messageType Type identifier for the message
+    /// @param data Encrypted message payload
+    function emitTransfer(
+        address to,
+        uint256 messageType,
+        bytes calldata data
+    ) external whenNotPaused {
+        emit AtaraxiaTransfer(msg.sender, to, messageType, data);
+    }
+
+    /// @notice Transfers contract ownership to a new address
+    /// @dev Includes zero-address check for safety
+    /// @param newOwner Address of the new owner
+    function transferOwnership(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "Invalid new owner");
+        emit OwnershipTransferred(owner, newOwner);
+        owner = newOwner;
+    }
+
+    /// @notice Toggles the pause state of the contract
+    /// @dev Can only be called by the owner
+    function togglePause() external onlyOwner {
+        paused = !paused;
+        emit PauseStateChanged(paused);
+    }
+}
+
+/*
+ Copyright 2024 Scott Ewing
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+ http://www.apache.org/licenses/LICENSE-2.0
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+*/
